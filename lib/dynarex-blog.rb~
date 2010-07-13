@@ -89,7 +89,7 @@ class DynarexBlog
 
     @entities = Polyrex.new('entities/section[name]/entity[name,count]')
     @entities.create.section({name: 'main'}, id='main')
-    @entities.id('main').create.entity(name: '_entry', count: '1')
+    @entities.id('main').create.entity(name: 'entry', count: '1')
     @entities.create.section({name: 'tags'}, id='tags')
     @entities.save @file_path + 'entities.xml'
 
@@ -147,7 +147,7 @@ class DynarexBlog
 
     temp_doc = Document.new '<root/>'
     a.map{|x| x.text('file').to_s}.uniq.each do |file|
-      doc_entryx = Document.new File.open(@file_path + file,'r').read
+      doc_entryx = Document.new File.open(file,'r').read
       XPath.each(doc_entryx.root,'records/entry') do |entry|
         temp_doc.root.add entry
       end
