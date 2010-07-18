@@ -17,6 +17,8 @@ class DynarexBlog
     if File.exists? (@file_path + 'index.xml') then  open(@file_path) else fresh_start() end
     @current_lookup = '_entry_lookup.xml'
     @hc_lookup = HashCache.new(size: 15)
+    @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }
+    
     @hc_result = HashCache.new(size: 5)
     @hc_entry_file = HashCache.new(size: 5)
     super()
@@ -113,22 +115,32 @@ class DynarexBlog
 
   end
 
-  def page(number=1)
+  def page(number=0)
     current_lookup = @current_lookup
     @current_lookup = '_entry_lookup.xml'
+    result = nil
 
-    if number == 1 and current_lookup == '_entry_lookup.xml' and @index.records.length == 10 then 
-      Document.new(@index.to_xml)
+    if (number == 1) and (current_lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
+      result = Document.new(File.open(@file_path + 'index.xml','r').read)
     else
-      @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
+      result = @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
+      @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }      
     end
+        
+    result
   end
 
   def tag(tag)   
     @current_lookup = tag + '_lookup.xml'
     self
   end
-
+  
+  def length
+    doc = @hc_lookup.read('_entry_lookup.xml')    
+    XPath.first(doc.root, 'count(records/entry)')
+  end
+  
+  alias size length
     
   private
 
