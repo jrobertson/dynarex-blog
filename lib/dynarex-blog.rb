@@ -18,6 +18,7 @@ class DynarexBlog
     @current_lookup = '_entry_lookup.xml'
     @hc_lookup = HashCache.new(size: 5)
     @hc_result = HashCache.new(size: 5)
+    @hc_entry_file = HashCache.new(size: 5)
     super()
   end
 
@@ -115,7 +116,7 @@ class DynarexBlog
   def page(number=1)
     current_lookup = @current_lookup
     @current_lookup = '_entry_lookup.xml'
-    select_page(current_lookup, number)
+    @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
   end
 
   def tag(tag)   
@@ -146,30 +147,28 @@ class DynarexBlog
     #doc = Document.new File.open(@file_path + lookup,'r').read
     doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }
     
-    r = @hc_result.read(lookup + number.to_s) {
-      x1 = (number - 1) * 10
-      x2 = x1 + 9
+    x1 = (number - 1) * 10
+    x2 = x1 + 9
 
-      a = XPath.match(doc.root,'records/entry').reverse[x1..x2]
+    a = XPath.match(doc.root,'records/entry').reverse[x1..x2]
 
-      xpath_ids = "entry[%s]" % a.map{|x| x.text('id').to_s}.map{|x| "@id='%s'" % x}.join(' or ')
+    xpath_ids = "entry[%s]" % a.map{|x| x.text('id').to_s}.map{|x| "@id='%s'" % x}.join(' or ')
 
-      temp_doc = Document.new '<root/>'
-      a.map{|x| x.text('file').to_s}.uniq.each do |file|
-        doc_entryx = Document.new File.open(@file_path + file,'r').read
-        XPath.each(doc_entryx.root,'records/entry') do |entry|
-          temp_doc.root.add entry
-        end
+    temp_doc = Document.new '<root/>'
+    a.map{|x| x.text('file').to_s}.uniq.each do |file|
+      doc_entryx = Document.new( @@hc_entry_file.read(file) {File.open(@file_path + file,'r').read})
+      XPath.each(doc_entryx.root,'records/entry') do |entry|
+        temp_doc.root.add entry
       end
+    end
 
-      result = Document.new '<result><summary/><records/></result>'
-      records = XPath.first(result.root, 'records')
-      XPath.each(temp_doc.root, xpath_ids) do |record|
-        records.add record
-      end
-      result
-    }
-    r
+    result = Document.new '<result><summary/><records/></result>'
+    records = XPath.first(result.root, 'records')
+    XPath.each(temp_doc.root, xpath_ids) do |record|
+      records.add record
+    end
+    result
+
 
   end
 
