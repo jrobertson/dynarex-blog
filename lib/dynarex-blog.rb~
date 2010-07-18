@@ -116,7 +116,12 @@ class DynarexBlog
   def page(number=1)
     current_lookup = @current_lookup
     @current_lookup = '_entry_lookup.xml'
-    @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
+
+    if current_lookup == '_entry_lookup.xml' and @index.records.length == 10 then 
+      Document.new(@index.to_xml)
+    else
+      @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
+    end
   end
 
   def tag(tag)   
