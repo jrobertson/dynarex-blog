@@ -16,7 +16,7 @@ class DynarexBlog
     @file_path = file_path[/\/$/] ? file_path : file_path + '/'
     if File.exists? (@file_path + 'index.xml') then  open(@file_path) else fresh_start() end
     @current_lookup = '_entry_lookup.xml'
-    @hc_lookup = HashCache.new(size: 5)
+    @hc_lookup = HashCache.new(size: 15)
     @hc_result = HashCache.new(size: 5)
     @hc_entry_file = HashCache.new(size: 5)
     super()
@@ -156,7 +156,7 @@ class DynarexBlog
 
     temp_doc = Document.new '<root/>'
     a.map{|x| x.text('file').to_s}.uniq.each do |file|
-      doc_entryx = Document.new( @@hc_entry_file.read(file) {File.open(@file_path + file,'r').read})
+      doc_entryx = Document.new( @hc_entry_file.read(file) {File.open(@file_path + file,'r').read})
       XPath.each(doc_entryx.root,'records/entry') do |entry|
         temp_doc.root.add entry
       end
