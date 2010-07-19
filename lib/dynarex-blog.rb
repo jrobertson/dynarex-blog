@@ -123,12 +123,12 @@ class DynarexBlog
     result = @hc_result.read(lookup + number.to_s) do
 
       if (number == 1) and (lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
-        doc = @hc_lookup.read('_entry_lookup.xml')
+        doc = @hc_lookup.refresh('_entry_lookup.xml')
         r = Document.new(File.open(@file_path + 'index.xml','r').read)        
       else
         doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
         r = select_page(doc, number) 
-        @hc_lookup.read(@current_lookup) # refresh to maintain @current_lookup in the cache
+        @hc_lookup.refresh('_entry_lookup.xml') # refresh to maintain @current_lookup in the cache
       end
       
       [
