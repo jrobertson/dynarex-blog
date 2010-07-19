@@ -131,11 +131,20 @@ class DynarexBlog
         @hc_lookup.refresh(@current_lookup) # refresh to maintain @current_lookup in the cache
       end
       
-      [
-        ['total_records', XPath.first(doc.root, 'count(records/entry)')],
-        ['page_number', number]
-      ].each do |name, text|
-        r.root.elements['summary'].add Element.new(name).add_text(text.to_s)  
+      total_records = XPath.first(doc.root, 'count(records/entry)')
+      total_pages, remainder = %w(/ %).map {|x| total_records.send x, 10}
+      total_pages += 1 if remainder > 0      
+      
+      summary = {
+        total_records: total_records,
+        page_number: number,
+        total_pages: total_pages
+      }
+      
+      context = lookup[/^([a-zA-Z][\w\+-]+)_lookup.xml/,1]
+      summary[:context] = context if context
+      summary.each do |name, text|
+        r.root.elements['summary'].add Element.new(name.to_s).add_text(text.to_s)  
       end    
       
       r
