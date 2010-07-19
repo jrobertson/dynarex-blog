@@ -116,31 +116,38 @@ class DynarexBlog
   end
 
   def page(number=0)
-    current_lookup = @current_lookup
+    lookup = @current_lookup
     @current_lookup = '_entry_lookup.xml'
     result = nil
+    
+    result = @hc_result.read(lookup + number.to_s) do
 
-    if (number == 1) and (current_lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
-      result = Document.new(File.open(@file_path + 'index.xml','r').read)
-    else
-      result = @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
-      @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }      
+      if (number == 1) and (lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
+        doc = @hc_lookup.read('_entry_lookup.xml')
+        r = Document.new(File.open(@file_path + 'index.xml','r').read)        
+      else
+        doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
+        r = select_page(doc, number) 
+        @hc_lookup.read(@current_lookup) # refresh to maintain @current_lookup in the cache
+      end
+      
+      [
+        ['total_records', XPath.first(doc.root, 'count(records/entry)')],
+        ['page_number', number]
+      ].each do |name, text|
+        r.root.elements['summary'].add Element.new(name).add_text(text)  
+      end    
+      
+      r
     end
-        
+    
     result
   end
 
   def tag(tag)   
     @current_lookup = tag + '_lookup.xml'
     self
-  end
-  
-  def length
-    doc = @hc_lookup.read('_entry_lookup.xml')    
-    XPath.first(doc.root, 'count(records/entry)')
-  end
-  
-  alias size length
+  end  
     
   private
 
@@ -159,10 +166,9 @@ class DynarexBlog
     [lookup, XPath.first(lookup.root, "records/entry[id='#{id}']")]
   end
 
-  def select_page(lookup, number)
+  def select_page(doc, number)
 
     #doc = Document.new File.open(@file_path + lookup,'r').read
-    doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }
     
     x1 = (number - 1) * 10
     x2 = x1 + 9
@@ -184,6 +190,7 @@ class DynarexBlog
     XPath.each(temp_doc.root, xpath_ids) do |record|
       records.add record
     end
+      
     result
 
 
