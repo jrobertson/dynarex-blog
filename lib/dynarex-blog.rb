@@ -19,8 +19,8 @@ class DynarexBlog
     @hc_lookup = HashCache.new(size: 15)
     @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }
     
-    @hc_result = HashCache.new(size: 5)
-    @hc_entry_file = HashCache.new(size: 5)
+    @hc_result = HashCache.new(size: 10)
+    @hc_entry_file = HashCache.new(size: 10)
     super()
   end
 
@@ -42,6 +42,13 @@ class DynarexBlog
       create_record(record, @id.to_s, name=tag, type='tags')
     end
 
+  end  
+    
+  def entry(id)
+    doc_lookup = @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }
+    file = XPath.first(doc_lookup.root, "records/entry[id='#{id}']/file")
+    doc_entries = Document.new(@hc_entry_file.read(file) { File.open(@file_path + file,'r').read })
+    XPath.first(doc_entries.root, "records/entry[@id='#{id}']")
   end
 
   def delete(id=0)
