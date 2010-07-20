@@ -141,8 +141,6 @@ class DynarexBlog
         total_pages: total_pages
       }
       
-      context = lookup[/^([a-zA-Z][\w\+-]+)_lookup.xml/,1]
-      summary[:context] = context if context
       summary.each do |name, text|
         r.root.elements['summary'].add Element.new(name.to_s).add_text(text.to_s)  
       end    
@@ -156,7 +154,8 @@ class DynarexBlog
   def tag(tag)   
     @current_lookup = tag + '_lookup.xml'
     self
-  end  
+  end
+  
     
   private
 
