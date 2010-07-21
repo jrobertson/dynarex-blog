@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'dynarex-blog'
-  s.version = '0.3.16'
+  s.version = '0.4.0'
   s.summary = 'dynarex-blog'
   s.files = Dir['lib/**/*.rb']
   s.add_dependency('polyrex')

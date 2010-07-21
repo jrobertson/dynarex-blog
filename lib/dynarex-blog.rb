@@ -46,7 +46,7 @@ class DynarexBlog
     
   def entry(id)
     doc_lookup = @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }
-    file = XPath.first(doc_lookup.root, "records/entry[id='#{id}']/file")
+    file = XPath.first(doc_lookup.root, "records/entry[id='#{id}']/file/text()").to_s
     doc_entries = Document.new(@hc_entry_file.read(file) { File.open(@file_path + file,'r').read })
     XPath.first(doc_entries.root, "records/entry[@id='#{id}']")
   end
