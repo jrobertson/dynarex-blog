@@ -21,6 +21,7 @@ class DynarexBlog
     
     @hc_result = HashCache.new(size: 10)
     @hc_entry_file = HashCache.new(size: 10)
+    @hc_lookup_a = HashCache.new(size: 10)
     super()
   end
 
@@ -124,18 +125,22 @@ class DynarexBlog
 
   def page(number=0)
     lookup = @current_lookup
-    @current_lookup = '_entry_lookup.xml'
+
     result = nil
     
     result = @hc_result.read(lookup + number.to_s) do
 
       if (number == 1) and (lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
-        doc = @hc_lookup.read(@current_lookup)
+        doc = @hc_lookup.read(lookup)
         r = Document.new(File.open(@file_path + 'index.xml','r').read)        
       else
         doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
-        r = select_page(doc, number) 
-        @hc_lookup.refresh(@current_lookup) # refresh to maintain @current_lookup in the cache
+        r = select_page(doc, number)
+        @current_lookup = '_entry_lookup.xml'
+        
+        # refresh to maintain _entry_lookup in the cache
+        @hc_lookup.refresh(@current_lookup) 
+        @hc_lookup_a.refresh(@current_lookup)
       end
       
       total_records = XPath.first(doc.root, 'count(records/entry)')
@@ -163,6 +168,9 @@ class DynarexBlog
     self
   end
   
+  def tags
+    @entities.xpath "records/section[summary/name='tags']/records"    
+  end
     
   private
 
@@ -188,7 +196,9 @@ class DynarexBlog
     x1 = (number - 1) * 10
     x2 = x1 + 9
 
-    a = XPath.match(doc.root,'records/entry').reverse[x1..x2]
+    lookup_a = @hc_lookup_a.read(@current_lookup + number) {XPath.match(doc.root,'records/entry')}
+    a = lookup_a.reverse[x1..x2]
+    
 
     xpath_ids = "entry[%s]" % a.map{|x| x.text('id').to_s}.map{|x| "@id='%s'" % x}.join(' or ')
 

@@ -17,8 +17,11 @@ class DynarexBlog
     if File.exists? (@file_path + 'index.xml') then  open(@file_path) else fresh_start() end
     @current_lookup = '_entry_lookup.xml'
     @hc_lookup = HashCache.new(size: 15)
-    @hc_result = HashCache.new(size: 5)
-    @hc_entry_file = HashCache.new(size: 5)
+    @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }
+    
+    @hc_result = HashCache.new(size: 10)
+    @hc_entry_file = HashCache.new(size: 10)
+    @hc_lookup_a = HashCache.new(size: 10)
     super()
   end
 
@@ -40,6 +43,13 @@ class DynarexBlog
       create_record(record, @id.to_s, name=tag, type='tags')
     end
 
+  end  
+    
+  def entry(id)
+    doc_lookup = @hc_lookup.read(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }
+    file = XPath.first(doc_lookup.root, "records/entry[id='#{id}']/file/text()").to_s
+    doc_entries = Document.new(@hc_entry_file.read(file) { File.open(@file_path + file,'r').read })
+    XPath.first(doc_entries.root, "records/entry[@id='#{id}']")
   end
 
   def delete(id=0)
@@ -113,22 +123,52 @@ class DynarexBlog
 
   end
 
-  def page(number=1)
-    current_lookup = @current_lookup
-    @current_lookup = '_entry_lookup.xml'
+  def page(number=0)
+    lookup = @current_lookup
 
-    if current_lookup == '_entry_lookup.xml' and @index.records.length == 10 then 
-      Document.new(@index.to_xml)
-    else
-      @hc_result.read(current_lookup + number.to_s) { select_page(current_lookup, number) }
+    result = nil
+    
+    result = @hc_result.read(lookup + number.to_s) do
+
+      if (number == 1) and (lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
+        doc = @hc_lookup.read(lookup)
+        r = Document.new(File.open(@file_path + 'index.xml','r').read)        
+      else
+        doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
+        r = select_page(doc, number)
+        @current_lookup = '_entry_lookup.xml'
+        @hc_lookup.refresh(@current_lookup) # refresh to maintain @current_lookup in the cache
+        @hc_lookup_a.refresh(@current_lookup)
+      end
+      
+      total_records = XPath.first(doc.root, 'count(records/entry)')
+      total_pages, remainder = %w(/ %).map {|x| total_records.send x, 10}
+      total_pages += 1 if remainder > 0      
+      
+      summary = {
+        total_records: total_records,
+        page_number: number,
+        total_pages: total_pages
+      }
+      
+      summary.each do |name, text|
+        r.root.elements['summary'].add Element.new(name.to_s).add_text(text.to_s)  
+      end    
+      
+      r
     end
+    
+    result
   end
 
   def tag(tag)   
     @current_lookup = tag + '_lookup.xml'
     self
   end
-
+  
+  def tags
+    @entities.xpath "records/section[summary/name='tags']/records"    
+  end
     
   private
 
@@ -147,15 +187,16 @@ class DynarexBlog
     [lookup, XPath.first(lookup.root, "records/entry[id='#{id}']")]
   end
 
-  def select_page(lookup, number)
+  def select_page(doc, number)
 
     #doc = Document.new File.open(@file_path + lookup,'r').read
-    doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }
     
     x1 = (number - 1) * 10
     x2 = x1 + 9
 
-    a = XPath.match(doc.root,'records/entry').reverse[x1..x2]
+    lookup_a = @hc_lookup_a.read(@current_lookup + number) {XPath.match(doc.root,'records/entry')}
+    a = lookup_a.reverse[x1..x2]
+    
 
     xpath_ids = "entry[%s]" % a.map{|x| x.text('id').to_s}.map{|x| "@id='%s'" % x}.join(' or ')
 
@@ -172,8 +213,8 @@ class DynarexBlog
     XPath.each(temp_doc.root, xpath_ids) do |record|
       records.add record
     end
+      
     result
-
 
   end
 
