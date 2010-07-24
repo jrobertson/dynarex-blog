@@ -137,7 +137,9 @@ class DynarexBlog
         doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
         r = select_page(doc, number)
         @current_lookup = '_entry_lookup.xml'
-        @hc_lookup.refresh(@current_lookup) # refresh to maintain @current_lookup in the cache
+        
+        # refresh to maintain _entry_lookup in the cache
+        @hc_lookup.refresh(@current_lookup) 
         @hc_lookup_a.refresh(@current_lookup)
       end
       

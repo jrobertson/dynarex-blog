@@ -196,7 +196,7 @@ class DynarexBlog
     x1 = (number - 1) * 10
     x2 = x1 + 9
 
-    lookup_a = @hc_lookup_a.read(@current_lookup + number) {XPath.match(doc.root,'records/entry')}
+    lookup_a = @hc_lookup_a.read(@current_lookup + number.to_s) {XPath.match(doc.root,'records/entry')}
     a = lookup_a.reverse[x1..x2]
     
 
