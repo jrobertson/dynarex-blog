@@ -170,7 +170,7 @@ class DynarexBlog
   
   def tags
     raw_tags = @entities.xpath "records/section[summary/name='tags']/records"    
-    XPath.match(raw_tags, 'entity/summary').map{|tag| %w(name entry_count).map {|x| tag.text(x)} }
+    XPath.match(raw_tags, 'entity/summary').map{|tag| %w(name entry_count).map {|x| tag.text(x).to_s} }
   end
     
   private
