@@ -22,6 +22,9 @@ class DynarexBlog
     @hc_result = HashCache.new(size: 10)
     @hc_entry_file = HashCache.new(size: 10)
     @hc_lookup_a = HashCache.new(size: 10)
+    
+    raw_tags = @entities.xpath "records/section[summary/name='tags']/records"    
+    @tags = XPath.match(raw_tags, 'entity/summary').map{|tag| %w(name entry_count).map {|x| tag.text(x).to_s} }    
     super()
   end
 
@@ -39,10 +42,12 @@ class DynarexBlog
     @index.save @file_path + 'index.xml'
 
     create_record(record, @id.to_s, name='_entry', type='main')
-    record[:tags].split(/\s/).each do |tag|
-      create_record(record, @id.to_s, name=tag, type='tags')
+    if record[:tags] then
+      record[:tags].split(/\s/).each do |tag|
+        create_record(record, @id.to_s, name=tag, type='tags')
+      end
     end
-
+    
   end  
     
   def entry(id)
@@ -163,14 +168,13 @@ class DynarexBlog
     result
   end
 
-  def tag(tag)   
-    @current_lookup = tag + '_lookup.xml'
+  def tag(tag)      
+    @current_lookup = (@tags.assoc(tag) ? tag  : '_404') + '_lookup.xml'      
     self
   end
   
   def tags
-    raw_tags = @entities.xpath "records/section[summary/name='tags']/records"    
-    XPath.match(raw_tags, 'entity/summary').map{|tag| %w(name entry_count).map {|x| tag.text(x).to_s} }
+    @tags
   end
     
   private

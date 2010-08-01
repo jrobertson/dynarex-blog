@@ -39,10 +39,12 @@ class DynarexBlog
     @index.save @file_path + 'index.xml'
 
     create_record(record, @id.to_s, name='_entry', type='main')
-    record[:tags].split(/\s/).each do |tag|
-      create_record(record, @id.to_s, name=tag, type='tags')
+    if record[:tags] then
+      record[:tags].split(/\s/).each do |tag|
+        create_record(record, @id.to_s, name=tag, type='tags')
+      end
     end
-
+    
   end  
     
   def entry(id)
@@ -170,7 +172,7 @@ class DynarexBlog
   
   def tags
     raw_tags = @entities.xpath "records/section[summary/name='tags']/records"    
-    XPath.match(raw_tags, 'entity/summary').map{|tag| %w(name entry_count).map {|x| tag.text(x)} }
+    XPath.match(raw_tags, 'entity/summary').map{|tag| %w(name entry_count).map {|x| tag.text(x).to_s} }
   end
     
   private
