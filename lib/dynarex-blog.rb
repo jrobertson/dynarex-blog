@@ -48,6 +48,8 @@ class DynarexBlog
       end
     end
     
+    delete_cache_entry(lookup_filename, file)
+    
   end  
     
   def entry(id)
@@ -56,47 +58,66 @@ class DynarexBlog
     doc_entries = Document.new(@hc_entry_file.read(file) { File.open(@file_path + file,'r').read })
     XPath.first(doc_entries.root, "records/entry[@id='#{id}']")
   end
+  
+  def update(id, h)
+    lookup = Dynarex.new @file_path + @current_lookup
+    lookup_id = lookup.records[id][:id]
+    file = lookup.records[id][:body][:file]
 
-  def delete(id=0)
+    dynarex = Dynarex.new(@file_path + file) 
+    prev_tags = dynarex.record(id).tags
+    cur_tags = h[:tags]
+    
+    if cur_tags.length > 0 then
+      
+      a = cur_tags.split(/\s/)
+    
+      if prev_tags and prev_tags.length > 0 then
+	
+	b = prev_tags.split(/\s/)
+	old_list = a - b # tags to be deleted
+	new_list = b - a # tags to be inserted
+	
+	old_list.each {|x| delete_entry(tag_name, id) }
+	common = a.to_set.intersection(b).to_a # tags to be updated     
+	common.each {|name|  update_entry(name, id, h) }
+      else
+	new_list = a
+      end
+      
+      new_list.each {|tag| create_record(h, id, name=tag, type='tags') }
+      
+      dynarex.update(id, h)
+      dynarex.save
+    end
+    
+    lookup.update(lookup_id, uri: h[:title].gsub(/\s/,'-')).save
+    @hc_lookup.write(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }        
+
+  end
+
+  def delete(id='')
 
     # delete from the tags files (entry and lookup), the entry file and lookup
     # look the id up in lookup.xml
 
-    doc_entry, entry = open_lookup_record '_entry', id
+    lookup = Dynarex.new @file_path + @current_lookup
+    lookup_id = lookup.records[id][:id]
+    file = lookup.records[id][:body][:file]
+    
+    dynarex = Dynarex.new(@file_path + file)    
+    tags = dynarex.record(id).tags.split(/\s/)
+    dynarex.delete(id).save
 
-    dynarex_file = @file_path + entry.text('file').to_s
-    dynarex = Document.new(File.open(dynarex_file,'r').read)
-    dynarex_entry = XPath.first(dynarex.root, "records/entry[@id='#{id}']")
-    tags = dynarex_entry.text('tags').split(/\s/)
-
-    dynarex_entry.parent.delete dynarex_entry
-    File.open(dynarex_file,'w'){|f| dynarex.write f}
-
-    entry.parent.delete entry
-    lookup = "%s%s" % [@file_path, '_entry_lookup.xml']
-    File.open(lookup,'w'){|f| doc_entry.write f}
+    lookup.delete(lookup_id).save
 
     tags.each do |tag_name|
       # find the lookup
-      doc_tag, node_entry = open_lookup_record tag_name, id      
-      delete_entry(doc_tag, node_entry, tag_name, id)
+      delete_entry(tag_name, id)
     end
 
-    doc = Document.new File.open(@file_path + 'index.xml','r').read
-    node = XPath.first(doc.root, "records/entry[@id='#{id}']")
-
-    if node then
-      node_records = XPath.first(doc.root, 'records')
-      node_records.parent.delete node_records
-      records = Element.new 'records'
-           
-      new_records = select_page('_entry_lookup.xml', 1)
-      new_records.each {|record| records.add record}
-      doc.root.add records
-
-      File.open(@file_path + 'index.xml', 'w'){|f| doc.write f}
-      @index = Dynarex.new @file_path + 'index.xml'
-    end
+    # start of reindexing
+    refresh_index if index_include? id
     
   end
 
@@ -179,19 +200,44 @@ class DynarexBlog
     
   private
 
-  def delete_entry(doc, node, lookup_filename, id)
-    file = @file_path + node.text('file').to_s
-    Dynarex.new(file).delete(id).save file
+  def delete_entry(lookup_filename, id)
+    
+    lookup_path = "%s%s_lookup.xml" % [@file_path, lookup_filename]    
+    lookup = Dynarex.new lookup_path
+    
+    lookup_id = lookup.records[id][:id]
+    file = lookup.records[id][:body][:file]
+    lookup.delete(lookup_id).save    
+    
+    Dynarex.new(file).delete(id).save
+    delete_cache_entry(lookup_filename, file)
 
-    node.parent.delete node
-    lookup = "%s%s_lookup.xml" % [@file_path, lookup_filename]
-    File.open(lookup,'w'){|f| doc.write f}
   end
+  
+  def update_entry(lookup_filename, id, h)
 
-  def open_lookup_record(name, id)
-    lookup_path = "%s%s_lookup.xml" % [@file_path, name]
-    lookup = Document.new File.open(lookup_path,'r').read
-    [lookup, XPath.first(lookup.root, "records/entry[id='#{id}']")]
+    lookup_path = "%s%s_lookup.xml" % [@file_path, lookup_filename]    
+    lookup = Dynarex.new lookup_path
+    lookup_id = lookup.records[id][:id]
+    
+    file = lookup.records[id][:body][:file]
+    lookup.update(lookup_id, uri: h[:title].gsub(/\s/,'-')).save    
+
+    Dynarex.new(@file_path + file).update(id, h).save        
+    delete_cache_entry(lookup_filename, file)
+  end  
+
+  def delete_cache_entry(lookup_filename, file)
+    
+    @hc_entry_file.delete(file)
+    pg = file[/\d+\.xml$/]
+    
+    if pg then
+      @hc_result.delete(lookup_filename + pg) 
+      @hc_lookup_a.delete(lookup_filename)
+    end
+    
+    @hc_lookup.delete(lookup_filename)    
   end
 
   def select_page(doc, number)
@@ -265,11 +311,13 @@ class DynarexBlog
     dynarex.create record, id
     dynarex.save dynarex_path
 
+    delete_cache_entry(lookup_file, entry_file)
     # add the record to lookup
 
     lookup = Dynarex.new @file_path + lookup_file
     lookup.create id: id, file: entry_file, year: Time.now.strftime("%Y"), month: Time.now.strftime("%m"), uri: record[:title].gsub(/\s/,'-')
     lookup.save @file_path + lookup_file
+    @hc_lookup.write(lookup_file) { Document.new File.open(@file_path + lookup_file,'r').read }
     
     # if there is 15 items create a new entries file
     if dynarex.records.length >= 15 then
@@ -280,6 +328,24 @@ class DynarexBlog
       dynarex = new_blog_file "%s%s.xml" % [name, entry_count.text]
 
     end
+  end
+  
+  def refresh_index()
+    node_records = XPath.first(doc.root, 'records')
+    node_records.parent.delete node_records
+    records = Element.new 'records'
+	  
+    new_records = select_page('_entry_lookup.xml', 1)
+    new_records.each {|record| records.add record}
+    doc.root.add records
+
+    File.open(@file_path + 'index.xml', 'w'){|f| doc.write f}
+    @index = Dynarex.new @file_path + 'index.xml'    
+  end
+  
+  def index_include?(id)
+    doc = Document.new File.open(@file_path + 'index.xml','r').read
+    XPath.first(doc.root, "records/entry[@id='#{id}']")
   end
 
 end
