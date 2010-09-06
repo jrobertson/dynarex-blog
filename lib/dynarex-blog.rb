@@ -48,7 +48,7 @@ class DynarexBlog
       end
     end
     
-    delete_cache_entry(lookup_filename, file)
+    refresh_index if index_include? id
     
   end  
     
