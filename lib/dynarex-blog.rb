@@ -156,7 +156,7 @@ class DynarexBlog
     result = @hc_result.read(lookup + number.to_s) do
 
       if (number == 1) and (lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
-        doc = @hc_lookup.read(lookup)
+        doc = @hc_lookup.refresh(lookup)
         r = Document.new(File.open(@file_path + 'index.xml','r').read)        
       else
 	doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
@@ -335,7 +335,8 @@ class DynarexBlog
     node_records.parent.delete node_records
     records = Element.new 'records'
 	  
-    doc = @hc_lookup.read!(lookup) { Document.new File.open(@file_path + '_entry_lookup.xml','r').read }        
+    lookup = '_entry_lookup.xml'
+    doc = @hc_lookup.read!(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
     new_records = select_page(doc, 1)
     new_records.each {|record| records.add record}
     doc_index.root.add records
