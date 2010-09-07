@@ -30,6 +30,7 @@ class DynarexBlog
 
   def create_entry(record={})
 
+    @hc_result.reset
     @id += 1
     # create a new record
     @index.create record, @id
@@ -46,9 +47,7 @@ class DynarexBlog
       record[:tags].split(/\s/).each do |tag|
         create_record(record, @id.to_s, name=tag, type='tags')
       end
-    end
-    
-    refresh_index if index_include? id
+    end    
     
   end  
     
@@ -209,7 +208,7 @@ class DynarexBlog
     file = lookup.records[id][:body][:file]
     lookup.delete(lookup_id).save    
     
-    Dynarex.new(file).delete(id).save
+    Dynarex.new(@file_path + file).delete(id).save
     delete_cache_entry(lookup_filename, file)
 
   end
@@ -234,7 +233,7 @@ class DynarexBlog
     
     if pg then
       @hc_result.delete(lookup_filename + pg) 
-      @hc_lookup_a.delete(lookup_filename)
+      @hc_lookup_a.delete(lookup_filename + pg)
     end
     
     @hc_lookup.delete(lookup_filename)    
@@ -331,6 +330,7 @@ class DynarexBlog
   end
   
   def refresh_index()
+    doc = Document.new File.open(@file_path + 'index.xml','r').read
     node_records = XPath.first(doc.root, 'records')
     node_records.parent.delete node_records
     records = Element.new 'records'
