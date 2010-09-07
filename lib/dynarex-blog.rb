@@ -159,6 +159,7 @@ class DynarexBlog
         doc = @hc_lookup.read(lookup)
         r = Document.new(File.open(@file_path + 'index.xml','r').read)        
       else
+	doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
         r = select_page(lookup, number)
         @current_lookup = '_entry_lookup.xml'
         
@@ -238,10 +239,9 @@ class DynarexBlog
     @hc_lookup.delete(lookup_filename)    
   end
 
-  def select_page(lookup, number)
+  def select_page(doc, number)
 
-    #doc = Document.new File.open(@file_path + lookup,'r').read
-    doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
+    #doc = Document.new File.open(@file_path + lookup,'r').read    
     
     x1 = (number - 1) * 10
     x2 = x1 + 9
@@ -330,17 +330,17 @@ class DynarexBlog
   end
   
   def refresh_index()
-    doc = Document.new File.open(@file_path + 'index.xml','r').read
-    node_records = XPath.first(doc.root, 'records')
+    doc_index = Document.new File.open(@file_path + 'index.xml','r').read
+    node_records = XPath.first(doc_index.root, 'records')
     node_records.parent.delete node_records
     records = Element.new 'records'
 	  
-    @hc-lookup.delete('_entry_lookup.xml')
-    new_records = select_page('_entry_lookup.xml', 1)
+    doc = @hc_lookup.read!(lookup) { Document.new File.open(@file_path + '_entry_lookup.xml','r').read }        
+    new_records = select_page(doc, 1)
     new_records.each {|record| records.add record}
-    doc.root.add records
+    doc_index.root.add records
 
-    File.open(@file_path + 'index.xml', 'w'){|f| doc.write f}
+    File.open(@file_path + 'index.xml', 'w'){|f| doc_index.write f}
     @index = Dynarex.new @file_path + 'index.xml'    
   end
   
