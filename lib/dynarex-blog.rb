@@ -196,6 +196,10 @@ class DynarexBlog
   def tags
     @tags
   end
+  
+  def rebuild_index()
+    refresh_index()
+  end
     
   private
 
@@ -331,19 +335,18 @@ class DynarexBlog
   
   def refresh_index()
     doc_index = Document.new File.open(@file_path + 'index.xml','r').read
+
     node_records = XPath.first(doc_index.root, 'records')
     node_records.parent.delete node_records
-    records = Element.new 'records'
-	  
+
     lookup = '_entry_lookup.xml'
-    doc = @hc_lookup.read!(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
-    new_records = select_page(doc, 1)
-    new_records.each {|record| records.add record}
-    doc_index.root.add records
+    doc = Document.new File.open(@file_path + lookup,'r').read
+    page = select_page(doc, 1)
+    doc_index.root.add XPath.first(page, 'records')
 
     File.open(@file_path + 'index.xml', 'w'){|f| doc_index.write f}
     @index = Dynarex.new @file_path + 'index.xml'    
-  end
+  end  
   
   def index_include?(id)
     doc = Document.new File.open(@file_path + 'index.xml','r').read
