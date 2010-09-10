@@ -342,7 +342,7 @@ class DynarexBlog
     lookup = '_entry_lookup.xml'
     doc = Document.new File.open(@file_path + lookup,'r').read
     page = select_page(doc, 1)
-    doc_index.root.add XPath.first(page, 'records')
+    doc_index.root.add XPath.first(page.root, 'records')
 
     File.open(@file_path + 'index.xml', 'w'){|f| doc_index.write f}
     @index = Dynarex.new @file_path + 'index.xml'    
