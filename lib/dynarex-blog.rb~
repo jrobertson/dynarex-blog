@@ -30,6 +30,7 @@ class DynarexBlog
 
   def create_entry(record={})
 
+    @hc_result.reset
     @id += 1
     # create a new record
     @index.create record, @id
@@ -46,7 +47,7 @@ class DynarexBlog
       record[:tags].split(/\s/).each do |tag|
         create_record(record, @id.to_s, name=tag, type='tags')
       end
-    end
+    end    
     
   end  
     
@@ -115,21 +116,7 @@ class DynarexBlog
     end
 
     # start of reindexing
-    doc = Document.new File.open(@file_path + 'index.xml','r').read
-    node = XPath.first(doc.root, "records/entry[@id='#{id}']")
-
-    if node then
-      node_records = XPath.first(doc.root, 'records')
-      node_records.parent.delete node_records
-      records = Element.new 'records'
-           
-      new_records = select_page('_entry_lookup.xml', 1)
-      new_records.each {|record| records.add record}
-      doc.root.add records
-
-      File.open(@file_path + 'index.xml', 'w'){|f| doc.write f}
-      @index = Dynarex.new @file_path + 'index.xml'
-    end
+    refresh_index if index_include? id
     
   end
 
@@ -169,10 +156,10 @@ class DynarexBlog
     result = @hc_result.read(lookup + number.to_s) do
 
       if (number == 1) and (lookup == '_entry_lookup.xml') and (@index.records.length == 10) then 
-        doc = @hc_lookup.read(lookup)
+        doc = @hc_lookup.refresh(lookup)
         r = Document.new(File.open(@file_path + 'index.xml','r').read)        
       else
-        doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
+	doc = @hc_lookup.read(lookup) { Document.new File.open(@file_path + lookup,'r').read }        
         r = select_page(doc, number)
         @current_lookup = '_entry_lookup.xml'
         
@@ -209,6 +196,10 @@ class DynarexBlog
   def tags
     @tags
   end
+  
+  def rebuild_index()
+    refresh_index()
+  end
     
   private
 
@@ -221,7 +212,7 @@ class DynarexBlog
     file = lookup.records[id][:body][:file]
     lookup.delete(lookup_id).save    
     
-    Dynarex.new(file).delete(id).save
+    Dynarex.new(@file_path + file).delete(id).save
     delete_cache_entry(lookup_filename, file)
 
   end
@@ -246,7 +237,7 @@ class DynarexBlog
     
     if pg then
       @hc_result.delete(lookup_filename + pg) 
-      @hc_lookup_a.delete(lookup_filename)
+      @hc_lookup_a.delete(lookup_filename + pg)
     end
     
     @hc_lookup.delete(lookup_filename)    
@@ -254,7 +245,7 @@ class DynarexBlog
 
   def select_page(doc, number)
 
-    #doc = Document.new File.open(@file_path + lookup,'r').read
+    #doc = Document.new File.open(@file_path + lookup,'r').read    
     
     x1 = (number - 1) * 10
     x2 = x1 + 9
@@ -323,6 +314,7 @@ class DynarexBlog
     dynarex.create record, id
     dynarex.save dynarex_path
 
+    delete_cache_entry(lookup_file, entry_file)
     # add the record to lookup
 
     lookup = Dynarex.new @file_path + lookup_file
@@ -339,6 +331,26 @@ class DynarexBlog
       dynarex = new_blog_file "%s%s.xml" % [name, entry_count.text]
 
     end
+  end
+  
+  def refresh_index()
+    doc_index = Document.new File.open(@file_path + 'index.xml','r').read
+
+    node_records = XPath.first(doc_index.root, 'records')
+    node_records.parent.delete node_records
+
+    lookup = '_entry_lookup.xml'
+    doc = Document.new File.open(@file_path + lookup,'r').read
+    page = select_page(doc, 1)
+    doc_index.root.add XPath.first(page.root, 'records')
+
+    File.open(@file_path + 'index.xml', 'w'){|f| doc_index.write f}
+    @index = Dynarex.new @file_path + 'index.xml'    
+  end  
+  
+  def index_include?(id)
+    doc = Document.new File.open(@file_path + 'index.xml','r').read
+    XPath.first(doc.root, "records/entry[@id='#{id}']")
   end
 
 end
