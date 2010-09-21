@@ -128,7 +128,7 @@ class DynarexBlog
     @dynarex = new_blog_file '_entry1.xml'
     @index = new_blog_file 'index.xml'
 
-    @entities = Polyrex.new('entities/section[name]/entity[name,count]')
+    @entities = Polyrex.new('entities/section[name]/entity[name,count,entry_count]')
     @entities.create.section({name: 'main'}, id='main')
     @entities.id('main').create.entity(name: '_entry', count: '1')
     @entities.create.section({name: 'tags'}, id='tags')
