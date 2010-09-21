@@ -93,6 +93,8 @@ class DynarexBlog
     lookup.update(lookup_id, uri: h[:title].gsub(/\s/,'-')).save
     @hc_lookup.write(@current_lookup) { Document.new File.open(@file_path + @current_lookup,'r').read }        
 
+    refresh_index if index_include? id
+
   end
 
   def delete(id='')
