@@ -186,7 +186,7 @@ class DynarexBlog
       
       r
     end
-    
+    @current_lookup = '_entry_lookup.xml'
     result
   end
 
@@ -295,7 +295,7 @@ class DynarexBlog
     lookup_file = "%s_lookup.xml" % name
 
     if entry_count.nil?
-      @entities.id('tags').create.entity(name: name, count: '1')
+      @entities.id('tags').create.entity(name: name, count: '1', entry_count: '1')
       @entities.save @file_path + 'entities.xml'
       @entities = Polyrex.new @file_path + 'entities.xml'
       entry_count = @entities.xpath "records/section[summary/name='#{type}']/records/entity/summary[name='#{name}']/count"

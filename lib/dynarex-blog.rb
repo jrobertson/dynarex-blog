@@ -187,6 +187,8 @@ class DynarexBlog
       r
     end
     
+    @current_lookup = '_entry_lookup.xml'
+    
     result
   end
 
