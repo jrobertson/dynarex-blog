@@ -345,7 +345,7 @@ class DynarexBlog
 
     lookup = '_entry_lookup.xml'
     doc = Document.new File.open(@file_path + lookup,'r').read
-    @hc_lookup_a.delete(@file_path + lookup + '1')    
+    @hc_lookup_a.delete(lookup + '1')    
     page = select_page(doc, 1)
     doc_index.root.add XPath.first(page.root, 'records')
 
