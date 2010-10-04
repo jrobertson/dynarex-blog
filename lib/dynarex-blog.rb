@@ -63,7 +63,7 @@ class DynarexBlog
     lookup_id = lookup.records[id][:id]
     file = lookup.records[id][:body][:file]
 
-    @hc_entry_file.delete(file)
+    reset_cache_entry(@current_lookup, file)
     
     dynarex = Dynarex.new(@file_path + file) 
     prev_tags = dynarex.record(id).tags
@@ -247,6 +247,15 @@ class DynarexBlog
     end
     
     @hc_lookup.delete(lookup_filename)    
+  end
+  
+  def reset_cache_entry(lookup_filename, file)
+    
+    @hc_entry_file.delete(file)
+    pg = file[/\d+\.xml$/]
+    
+    @hc_result.delete(lookup_filename + pg)  if pg
+    
   end
 
   def select_page(doc, number)
