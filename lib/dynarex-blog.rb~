@@ -64,6 +64,7 @@ class DynarexBlog
     file = lookup.records[id][:body][:file]
 
     @hc_entry_file.delete(file)
+    
     dynarex = Dynarex.new(@file_path + file) 
     prev_tags = dynarex.record(id).tags
     cur_tags = h[:tags]

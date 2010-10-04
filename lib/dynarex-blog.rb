@@ -150,10 +150,7 @@ class DynarexBlog
     threads << Thread.new{@entities = Polyrex.new @file_path + 'entities.xml'}
     threads.each {|thread| thread.join}
 
-  endh2 = {title: 'z94z94z94', body: 'body xxxx 345', tags: 'audio'}
-dynarex.update_user 'jrobertson','2', h2
-pg = dynarex.page 1
-
+  end
 
   def page(number=0)
     lookup = @current_lookup
