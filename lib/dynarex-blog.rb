@@ -239,7 +239,7 @@ class DynarexBlog
   def delete_cache_entry(lookup_filename, file)
     
     @hc_entry_file.delete(file)
-    pg = file[/\d+\.xml$/]
+    pg = file[/(\d+)\.xml$/,1]
     
     if pg then
       @hc_result.delete(lookup_filename + pg) 
@@ -252,7 +252,7 @@ class DynarexBlog
   def reset_cache_entry(lookup_filename, file)
     
     @hc_entry_file.delete(file)
-    pg = file[/\d+\.xml$/]
+    pg = file[/(\d+)\.xml$/,1]
     
     @hc_result.delete(lookup_filename + pg)  if pg
     
