@@ -63,6 +63,8 @@ class DynarexBlog
     lookup_id = lookup.records[id][:id]
     file = lookup.records[id][:body][:file]
 
+    @hc_entry_file.delete(file)
+    
     dynarex = Dynarex.new(@file_path + file) 
     prev_tags = dynarex.record(id).tags
     cur_tags = h[:tags]
@@ -148,7 +150,10 @@ class DynarexBlog
     threads << Thread.new{@entities = Polyrex.new @file_path + 'entities.xml'}
     threads.each {|thread| thread.join}
 
-  end
+  endh2 = {title: 'z94z94z94', body: 'body xxxx 345', tags: 'audio'}
+dynarex.update_user 'jrobertson','2', h2
+pg = dynarex.page 1
+
 
   def page(number=0)
     lookup = @current_lookup
